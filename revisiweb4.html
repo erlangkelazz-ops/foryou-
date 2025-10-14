@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asyifaa // A Cosmic Love</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Great+Vibes&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #ff85c2;
+            --secondary-color: #a084ff;
+            --glow-color: rgba(255, 133, 194, 0.7);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #000000;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        #webgl-canvas {
+            position: fixed; top: 0; left: 0;
+            outline: none; z-index: -1;
+        }
+        
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; display: flex; justify-content: center;
+            align-items: center; z-index: 1000; transition: opacity 1s ease;
+        }
+        #loader.hidden { opacity: 0; pointer-events: none; }
+
+        .scroll-container {
+            width: 100%; height: 600vh;
+            transition: opacity 1s ease, pointer-events 1s ease;
+            position: relative;
+        }
+        .content-section {
+            height: 100vh; width: 100%; display: flex; justify-content: center;
+            align-items: center; position: sticky; top: 0; color: rgba(255, 255, 255, 0.9);
+            text-align: center; padding: 20px; opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 1.5s cubic-bezier(0.2, 0.8, 0.2, 1), transform 1.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .content-section.visible { opacity: 1; transform: translateY(0); }
+        h1 {
+            font-family: 'Playfair Display', serif; font-size: clamp(4rem, 10vw, 9rem);
+            font-weight: 800; background: linear-gradient(45deg, #fff, #ffc0e0);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 80px var(--glow-color); line-height: 1.1;
+        }
+        h2 {
+            font-family: 'Playfair Display', serif; font-size: clamp(2.5rem, 6vw, 4rem);
+            margin-bottom: 2rem; text-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        p {
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem); line-height: 2;
+            max-width: 700px; text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+        }
+        .signature-container {
+            width: 100%; max-width: 400px; position: relative;
+        }
+        .signature-name {
+            font-family: 'Great Vibes', cursive; font-size: clamp(3rem, 8vw, 4.5rem);
+            color: var(--primary-color); text-shadow: 0 0 25px var(--glow-color);
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); opacity: 0; transition: opacity 2s ease 2s;
+        }
+        #signature-path {
+            stroke: var(--primary-color); stroke-width: 5; fill: transparent;
+            filter: drop-shadow(0 0 15px var(--glow-color));
+            stroke-dasharray: 1200; stroke-dashoffset: 1200;
+            transition: stroke-dashoffset 4s cubic-bezier(0.7, 0, 0.3, 1);
+        }
+        .signature-container.drawn #signature-path { stroke-dashoffset: 0; }
+        .signature-container.drawn .signature-name { opacity: 1; }
+
+        .novel-button {
+            cursor: pointer; font-family: 'Playfair Display', serif;
+            font-size: clamp(1.2rem, 4vw, 2.5rem);
+            color: #fff; text-decoration: none; border: 2px solid var(--primary-color);
+            padding: 15px 30px; border-radius: 50px; background-color: rgba(0,0,0,0.2);
+            text-shadow: 0 0 15px var(--glow-color);
+            box-shadow: 0 0 20px var(--glow-color), inset 0 0 15px var(--glow-color);
+            white-space: nowrap; display: inline-flex;
+            align-items: center; justify-content: center;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.5s ease;
+        }
+        .novel-button.visible {
+             opacity: 1;
+             transform: scale(1);
+        }
+        .novel-button:hover {
+            transform: scale(1.05); background-color: rgba(255, 133, 194, 0.2);
+            box-shadow: 0 0 35px var(--glow-color), inset 0 0 20px var(--glow-color);
+        }
+
+        .novel-wrapper {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            padding: 5vh 5vw; display: flex; flex-direction: column; align-items: center;
+            opacity: 0; pointer-events: none;
+            transition: opacity 1s ease;
+            overflow-y: auto; z-index: 5;
+        }
+        .novel-wrapper.active { opacity: 1; pointer-events: auto; }
+        .novel-content {
+            width: 100%; max-width: 800px; background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px;
+            padding: clamp(2rem, 5vw, 4rem); margin: auto;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        .novel-title {
+            font-family: 'Playfair Display', serif; font-size: clamp(2.5rem, 6vw, 4rem);
+            text-align: center; margin-bottom: 1rem; color: var(--primary-color);
+            text-shadow: 0 0 20px var(--glow-color);
+        }
+        /* Style baru untuk sinopsis */
+        .synopsis {
+            font-style: italic;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.75);
+            margin: 1rem auto 3rem auto;
+            max-width: 650px;
+            line-height: 1.7 !important;
+            font-size: clamp(0.9rem, 2vw, 1rem) !important;
+        }
+        .chapter { margin-bottom: 3rem; }
+        .chapter h2 {
+            font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.5rem);
+            margin-bottom: 1.5rem; border-bottom: 1px solid var(--primary-color);
+            padding-bottom: 0.5rem; display: inline-block;
+        }
+        .chapter p {
+            font-size: clamp(1rem, 2.5vw, 1.2rem); line-height: 2;
+            color: rgba(255, 255, 255, 0.85); margin-bottom: 1.5rem;
+            text-align: left; /* Ratakan kiri untuk kenyamanan membaca */
+        }
+        .back-button {
+            position: fixed; top: 20px; left: 20px;
+            font-family: 'Poppins', sans-serif; color: #fff; text-decoration: none;
+            background: rgba(0, 0, 0, 0.5); padding: 10px 20px;
+            border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease; cursor: pointer; z-index: 10;
+        }
+        .back-button:hover {
+            background: var(--primary-color); border-color: var(--primary-color);
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader"><p>Entering the cosmos...</p></div>
+
+    <canvas id="webgl-canvas"></canvas>
+    
+    <div class="scroll-container">
+        <section id="section-1" class="content-section"><div><h1>For Asyifaa</h1></div></section>
+        <section id="section-2" class="content-section">
+            <div>
+                <h2>My Dearest Universe,</h2>
+                <p>Di hamparan tak terbatas ini, kamu adalah nebula terindah—pusat dari segala cahaya dan keajaiban. Setiap momen bersamamu adalah bintang baru yang lahir, menerangi semesta hatiku.</p>
+            </div>
+        </section>
+        <section id="section-3" class="content-section">
+             <div>
+                <h2>My Constant Star,</h2>
+                <p>Waktu melambat di dekatmu. Kamu adalah anomali paling memesona, sebuah singularitas di mana logikaku runtuh dan hanya ada cinta yang tulus dan tak terbatas.</p>
+            </div>
+        </section>
+        <section id="section-4" class="content-section">
+             <div class="signature-container">
+                <svg viewBox="0 0 500 500">
+                    <path id="signature-path" d="M250 150 C100 50, 100 300, 250 400 C400 300, 400 50, 250 150 Z" />
+                </svg>
+                <div class="signature-name">Asyifaa</div>
+            </div>
+        </section>
+        <section id="section-5" class="content-section">
+            <div>
+                <a id="show-novel-btn" class="novel-button">Read Our Cosmic Story</a>
+            </div>
+        </section>
+    </div>
+
+    <div class="novel-wrapper">
+        <a id="back-to-intro-btn" class="back-button">&larr; Kembali</a>
+        <div class="novel-content">
+            <h1 class="novel-title">Gema yang Hilang</h1>
+            <p class="synopsis">Cinta pertama tak pernah benar-benar mati, ia hanya berubah menjadi gema. Bagi Nika, gema itu adalah suara tawa Asyifa di halaman sekolah dasar, sebuah janji kelingking di bawah pohon mangga, dan kenangan yang ia genggam erat selama bertahun-tahun. Namun, ketika ia kembali untuk mengubah gema itu menjadi melodi yang utuh, ia menemukan bahwa Asyifa telah lama mematikan musiknya.</p>
+            
+            <div class="chapter">
+                <h2>Babak 1: Janji Kelingking di Bawah Pohon Mangga (Kelas 3 SD)</h2>
+                <p>Dunia bagi Nika dan Asyifa yang berusia sembilan tahun hanya seluas halaman sekolah dan jalanan komplek perumahan mereka. Di dunia yang sempit itu, mereka adalah raja dan ratu. Nika, dengan rambutnya yang selalu acak-acakan dan senyumnya yang ompong, akan selalu menyimpan permen lolipop rasa stroberi untuk Asyifa. Sementara Asyifa, dengan dua kuncir kudanya yang menggemaskan, akan selalu membagi bekalnya dengan Nika.</p>
+                <p>Mereka bukan sekadar teman. Di usia yang begitu muda, mereka memahami sebuah ikatan yang mereka sebut "pacaran". Itu adalah istilah yang mereka dengar dari kakak-kakak mereka, sebuah kata yang berarti "selalu bersama". Dan mereka memang selalu bersama.</p>
+                <p>Saat istirahat, mereka akan duduk di bawah pohon mangga besar di sudut sekolah, jauh dari keramaian. Di sanalah mereka berbagi cerita, dari kartun yang mereka tonton semalam hingga omelan ibu Nika karena sepatunya yang lagi-lagi berlumpur.</p>
+                <p>"Nika," kata Asyifa suatu siang, sambil menyodorkan sebungkus wafer. "Nanti kalau sudah besar, kita nikah, ya?"</p>
+                <p>Nika, yang sedang sibuk menggambar di tanah dengan ranting, berhenti dan menatap Asyifa dengan serius. "Nikah itu yang pakai baju bagus-bagus, kan?"</p>
+                <p>Asyifa mengangguk semangat. "Iya! Terus kita tinggal di rumah yang ada ayunannya."</p>
+                <p>Nika tersenyum lebar, memperlihatkan gigi ompongnya lagi. "Oke. Janji, ya?" Ia mengulurkan jari kelingkingnya.</p>
+                <p>Asyifa tersenyum dan menautkan kelingkingnya yang mungil ke kelingking Nika. "Janji."</p>
+                <p>Janji itu terasa lebih kuat dari apa pun di dunia. Bagi mereka, masa depan sudah terukir jelas di bawah pohon mangga itu. Mereka akan tumbuh dewasa bersama, selamanya.</p>
+            </div>
+
+            <div class="chapter">
+                <h2>Babak 2: Keheningan yang Tiba-Tiba (Akhir Kelas 5 SD)</h2>
+                <p>Dua tahun berlalu, dan ikatan mereka semakin kuat. Mereka melalui semuanya bersama, dari tugas kelompok yang sulit hingga demam panggung saat pentas seni sekolah. Nika adalah pelindung Asyifa, dan Asyifa adalah penenang Nika.</p>
+                <p>Namun, semua berubah seminggu sebelum ujian kenaikan kelas 6. Hari Senin, bangku Nika kosong. Asyifa pikir Nika sakit. Hari Selasa, bangku itu masih kosong. Asyifa mulai cemas. Ia mencoba menelepon ke telepon rumah Nika, tetapi tidak ada yang mengangkat. Rumah Nika di komplek pun tampak sepi seperti ditinggal penghuninya.</p>
+                <p>Rabu, Kamis, Jumat. Nika tidak pernah kembali. Tidak ada pesan, tidak ada kabar. Ia lenyap begitu saja, seolah ditelan bumi. Bagi Asyifa kecil, itu adalah sebuah misteri yang menyakitkan. Sahabat terbaiknya, pacarnya, separuh dunianya, pergi tanpa sepatah kata pun.</p>
+                <p>Di hari terakhir ujian, Asyifa duduk sendirian di bawah pohon mangga, menatap kosong ke arah bangku ayunan. Janji kelingking itu terasa seperti kebohongan besar. Hatinya remuk. Perlahan, kekecewaan itu berubah menjadi lapisan es tipis yang mulai membekukan kenangan.</p>
+                <p>Sementara itu, ratusan kilometer jauhnya di sebuah desa kecil di Jawa Timur, Nika menatap sawah yang terbentang dari jendela rumah neneknya. Ia dipaksa pindah mendadak karena ayahnya kehilangan pekerjaan dan mereka harus menumpang hidup untuk sementara waktu. Ia tidak diizinkan membawa telepon, tidak punya cara untuk menghubungi Asyifa. Setiap malam, ia memandangi langit, berharap bintang yang sama juga sedang dilihat oleh Asyifa, dan berbisik, "Tunggu aku, Syif. Aku pasti kembali."</p>
+            </div>
+
+            <div class="chapter">
+                <h2>Babak 3: Gema yang Kembali (Kelas 1 SMP)</h2>
+                <p>Tiga tahun adalah waktu yang lama bagi seorang anak yang beranjak remaja. Asyifa bukan lagi gadis kecil dengan dua kuncir kuda. Ia kini adalah siswi SMP yang populer, dikelilingi banyak teman baru. Kenangan tentang Nika telah terkubur dalam-dalam, menjadi sebuah cerita masa kecil yang memalukan untuk diingat. Luka karena ditinggalkan telah membuatnya membangun dinding di sekitar hatinya.</p>
+                <p>Suatu sore saat pulang sekolah, seorang remaja laki-laki canggung dengan ransel yang sedikit kebesaran menghampirinya di gerbang.</p>
+                <p>"Asyifa?"</p>
+                <p>Asyifa menoleh. Ia menatap wajah itu sejenak. Ada sesuatu yang familier, tetapi ia tidak bisa mengingatnya. "Ya, siapa?" tanyanya sedikit ketus.</p>
+                <p>Hati Nika mencelos. Ia berharap akan ada pelukan, atau setidaknya senyum bahagia. Bukan tatapan asing seperti ini. "Ini aku, Nika. Nika... teman SD-mu."</p>
+                <p>Nama itu seperti gema dari masa lalu. Asyifa terdiam sesaat, memori yang terkunci rapat perlahan terbuka. Wajahnya berubah, bukan menjadi senang, melainkan datar. "Oh, Nika. Kamu... kembali?" tanyanya tanpa antusiasme.</p>
+                <p>"Iya! Aku kembali! Keluargaku sudah pindah lagi ke sini. Aku mencarimu, Syif. Aku..." Nika tidak bisa menahan kegembiraannya.</p>
+                <p>Namun, kegembiraan itu hanya miliknya seorang. Asyifa hanya mengangguk canggung. "Oke. Aku duluan, ya. Teman-temanku sudah menunggu." Ia berbalik dan berjalan pergi tanpa menoleh lagi, meninggalkan Nika yang berdiri mematung di depan gerbang sekolah.</p>
+                <p>Hantaman kenyataan itu lebih menyakitkan dari apa pun. Gadis yang selama ini ia rindukan, gadis yang menjadi alasannya untuk bertahan dan ingin cepat kembali, ternyata telah melupakannya. Atau lebih buruk lagi, tidak peduli.</p>
+            </div>
+
+            <div class="chapter">
+                <h2>Babak 4: Perjuangan di Atas Puing Kenangan (SMP - SMA)</h2>
+                <p>Nika tidak menyerah. Baginya, janji kelingking itu masih berlaku. Ia percaya bahwa Asyifa yang dulu masih ada di suatu tempat di balik sikap dinginnya. Maka dimulailah perjuangan panjangnya.</p>
+                <p>Selama tiga tahun masa SMP hingga mereka memasuki gerbang SMA yang sama, Nika mencoba segalanya. Ia akan menyapanya setiap pagi, yang hanya dibalas dengan gumaman atau lirikan singkat. Ia mencoba bergabung dengan kelompok belajar Asyifa, namun ia selalu merasa seperti orang asing yang tak diundang. Ia mengirimkan pesan-pesan singkat menanyakan kabar, yang sering kali hanya dibaca tanpa dibalas.</p>
+                <p>Nika menjadi bayangan Asyifa. Ia tahu jadwal pelajarannya, tahu di mana Asyifa dan teman-temannya biasa berkumpul saat istirahat, dan tahu jalan mana yang Asyifa lewati saat pulang. Perjuangannya yang tulus di mata Nika, justru terlihat seperti gangguan yang menyebalkan di mata Asyifa.</p>
+                <p>Asyifa semakin muak. Setiap kali melihat Nika, ia teringat pada perasaan ditinggalkan saat kecil. Rasa sayang itu telah lama berubah menjadi campuran antara benci dan risih. Nika adalah representasi dari masa lalu yang ingin ia lupakan.</p>
+                <p>Puncaknya terjadi di koridor sekolah saat mereka kelas 1 SMA. Nika, dengan keberanian terakhirnya, mencegat Asyifa.</p>
+                <p>"Syif, kita perlu bicara," kata Nika dengan suara bergetar.</p>
+                <p>Asyifa menghela napas kasar. "Bicara apa lagi, Nik? Sudah cukup."</p>
+                <p>"Tentang kita. Tentang janji kita di bawah pohon mangga..."</p>
+                <p>Asyifa tertawa sinis, tawa yang menusuk langsung ke jantung Nika. "Janji? Nika, sadarlah! Kita itu masih kelas 3 SD! Itu cuma cinta monyet, permainan anak kecil! Kamu pergi tanpa kabar dan sekarang kamu datang menagih janji konyol itu? Aku sudah punya kehidupanku sendiri sekarang."</p>
+                <p>"Tapi aku tidak pernah melupakanmu," bisik Nika, matanya berkaca-kaca.</p>
+                <p>"Itu masalahmu, bukan masalahku," jawab Asyifa dengan dingin. "Tolong, berhenti menggangguku. Anggap saja kita tidak pernah saling kenal."</p>
+                <p>Asyifa mendorong bahu Nika pelan dan berjalan melewatinya.</p>
+                <p>Nika tidak bergerak. Ia berdiri di tengah koridor yang ramai, tetapi ia merasa benar-benar sendirian. Kata-kata Asyifa adalah palu godam yang menghancurkan sisa-sisa harapan terakhirnya. Ia sadar, selama ini ia tidak sedang berjuang untuk mendapatkan kembali hati Asyifa. Ia hanya sedang berjuang melawan waktu dan kenyataan.</p>
+                <p>Dan dalam pertarungan itu, ia telah kalah telak. Gema dari masa lalu itu akhirnya benar-benar hilang, tergantikan oleh keheningan yang memekakkan telinga. Ia harus belajar untuk berjalan maju, sendirian.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        let isNovelView = false;
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('webgl-canvas'), antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        
+        const loaderElement = document.getElementById('loader');
+        const loadingManager = new THREE.LoadingManager();
+        loadingManager.onLoad = () => { setTimeout(() => { loaderElement.classList.add('hidden'); }, 500); };
+
+        const renderScene = new RenderPass(scene, camera);
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+        bloomPass.threshold = 0; bloomPass.strength = 1.2; bloomPass.radius = 0.5;
+        const composer = new EffectComposer(renderer);
+        composer.addPass(renderScene); composer.addPass(bloomPass);
+
+        const starCount = 15000; const starGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(starCount * 3); const scales = new Float32Array(starCount);
+        const opacities = new Float32Array(starCount);
+        for (let i = 0; i < starCount; i++) {
+            const i3 = i * 3; positions[i3] = (Math.random() - 0.5) * 2000;
+            positions[i3 + 1] = (Math.random() - 0.5) * 2000; positions[i3 + 2] = (Math.random() - 0.5) * 2000;
+            scales[i] = Math.random() * 2 + 0.5; opacities[i] = Math.random() * 0.5 + 0.3;
+        }
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        starGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
+        starGeometry.setAttribute('opacity', new THREE.BufferAttribute(opacities, 1));
+        
+        const starMaterial = new THREE.ShaderMaterial({
+            uniforms: { color: { value: new THREE.Color(0xffffff) }, time: { value: 0.0 } },
+            vertexShader: `
+                attribute float scale;
+                attribute float opacity;
+                varying float vOpacity;
+                void main() {
+                    vOpacity = opacity;
+                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                    gl_PointSize = scale * (300.0 / -mvPosition.z);
+                    gl_Position = projectionMatrix * mvPosition;
+                }`,
+            fragmentShader: `
+                uniform vec3 color;
+                uniform float time;
+                varying float vOpacity;
+                void main() {
+                    float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
+                    if (distanceToCenter > 0.5) discard;
+                    
+                    float twinkle = (sin(time * 2.0 + vOpacity * 20.0) + 1.0) / 2.0 * 0.5 + 0.5;
+                    gl_FragColor = vec4(color, vOpacity * twinkle);
+                }`,
+            transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+        });
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        scene.add(stars);
+
+        const textureLoader = new THREE.TextureLoader(loadingManager);
+        const nebulaTexture = textureLoader.load('https://assets.codepen.io/127738/transparent_11.png');
+        const colors = [new THREE.Color(0xff85c2), new THREE.Color(0xa084ff), new THREE.Color(0x85ffc2)];
+        const nebulas = [];
+        for (let i = 0; i < 20; i++) {
+            const nebulaMaterial = new THREE.MeshBasicMaterial({
+                map: nebulaTexture, blending: THREE.AdditiveBlending, depthWrite: false,
+                transparent: true, opacity: 0.15, color: colors[i % 3]
+            });
+            const nebulaPlane = new THREE.PlaneGeometry(300, 300);
+            const nebula = new THREE.Mesh(nebulaPlane, nebulaMaterial);
+            nebula.position.set((Math.random() - 0.5) * 400, (Math.random() - 0.5) * 200, -200 - (i * 100));
+            nebula.rotation.z = Math.random() * Math.PI;
+            nebula.userData.rotationSpeed = (Math.random() - 0.5) * 0.05;
+            scene.add(nebula);
+            nebulas.push(nebula);
+        }
+
+        const scrollContainer = document.querySelector('.scroll-container');
+        const novelWrapper = document.querySelector('.novel-wrapper');
+        const showNovelBtn = document.getElementById('show-novel-btn');
+        const backToIntroBtn = document.getElementById('back-to-intro-btn');
+        
+        showNovelBtn.addEventListener('click', () => {
+            isNovelView = true;
+            scrollContainer.style.opacity = '0';
+            scrollContainer.style.pointerEvents = 'none';
+            novelWrapper.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+
+        backToIntroBtn.addEventListener('click', () => {
+            isNovelView = false;
+            scrollContainer.style.opacity = '1';
+            scrollContainer.style.pointerEvents = 'auto';
+            novelWrapper.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        });
+
+        let targetCameraZ = 500; let targetCameraX = 0; let targetCameraY = 0;
+        function updatePositions() {
+            const scrollPercent = window.scrollY / (scrollContainer.scrollHeight - window.innerHeight);
+            targetCameraZ = 500 - scrollPercent * 1500;
+            targetCameraX = Math.sin(scrollPercent * Math.PI * 2) * 50;
+            targetCameraY = Math.cos(scrollPercent * Math.PI * 2) * 30;
+        }
+        window.addEventListener('scroll', updatePositions);
+        updatePositions();
+
+        const sections = document.querySelectorAll('.content-section');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    sections.forEach(sec => { sec.classList.remove('visible'); });
+                    entry.target.classList.add('visible');
+                    
+                    const signatureContainer = document.querySelector('.signature-container');
+                    const novelButton = document.querySelector('.novel-button');
+
+                    if (entry.target.id === 'section-4') {
+                        signatureContainer.classList.add('drawn');
+                    } else {
+                        signatureContainer.classList.remove('drawn');
+                    }
+                    
+                    if (entry.target.id === 'section-5') {
+                        setTimeout(() => {
+                           novelButton.classList.add('visible');
+                        }, 1000);
+                    } else {
+                        novelButton.classList.remove('visible');
+                    }
+                }
+            });
+        }, { threshold: 0.6 });
+        sections.forEach(section => observer.observe(section));
+
+        const clock = new THREE.Clock();
+        function animate() {
+            const elapsedTime = clock.getElapsedTime();
+            starMaterial.uniforms.time.value = elapsedTime;
+            nebulas.forEach(nebula => { nebula.rotation.z += nebula.userData.rotationSpeed * 0.1; });
+
+            if (isNovelView) {
+                camera.position.z += (5 - camera.position.z) * 0.02;
+                camera.position.x = Math.sin(elapsedTime * 0.05) * 5;
+                camera.position.y = Math.cos(elapsedTime * 0.05) * 5;
+            } else {
+                const lerpFactor = 0.05;
+                camera.position.z += (targetCameraZ - camera.position.z) * lerpFactor;
+                camera.position.x += (targetCameraX - camera.position.x) * lerpFactor;
+                camera.position.y += (targetCameraY - camera.position.y) * lerpFactor;
+            }
+            
+            camera.lookAt(scene.position);
+            composer.render();
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        });
+    </script>
+</body>
+</html>
